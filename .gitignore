@@ -1,0 +1,5 @@
+# Ignore build files and backup files
+backup/
+resources/
+max-2017-cpp.docset/
+*.pyc
