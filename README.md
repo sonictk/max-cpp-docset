@@ -21,17 +21,18 @@ application's documentation for how to install such things.
 You will need to install the dependencies listed in ``requirements.txt``
 through ``pip`` or have it available on your ``PYTHONPATH``.
 
+Due to the size of the 3ds max SDK reference, the documentation sources are not
+included in this repository. You will need to download it yourself from
+[Autodesk's website](https://www.autodesk.com/me-sdk-docs). 
+
 ### Generating the docset
 
 The Python scripts for building the database and formatting the documentation
-to work in standalone mode are located in the ``bin`` directory. The Autodesk
-documentation should be placed in the directory:
-``max-2017-cpp.docset/Contents/Resources/Documents``.  Once that is
-done, you should be able to run ``python clean_html_documentation.py`` and 
-``python generate_database_entries.py`` in order to re-generate the docset. The
-formatted HTML output will be placed in
-``maya-2017-cpp.docset/Contents/Resources/Documents/output``, which
-you should move to the ``Documents`` directory instead.
+to work in standalone mode are located in the ``bin`` directory. 
+
+Once that is done, you should be able to run ``python
+clean_html_documentation.py`` and ``python generate_database_entries.py`` in
+order to re-generate the docset. 
 
 
 ## License
