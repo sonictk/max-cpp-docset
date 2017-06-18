@@ -3,6 +3,9 @@
 This is a [Dash](http://kapeli.com/dash)-compatible docset for the 3ds max C++ SDK reference. It has been
 built against the 2017 documentation, but should work for 2018 as well. 
 
+## Status
+
+**This is still a work-in-progress. The docset generation scripts are not ready to be used yet.**
 
 ## Usage
 
