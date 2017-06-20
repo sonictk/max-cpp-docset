@@ -12,17 +12,17 @@ from bs4 import BeautifulSoup
 from lib import chunk
 
 
-def format_files(all_files, docs_path, output_path):
+def format_files(all_files, docs_path, output_path, job_number=0):
     """
     This function formats the ``list`` of HTML documentation files given and
     writes the output files to a subdirectory.
     """
-    logger = logging.getLogger(__name__)
-
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger('format_files_{0}'.format(str(job_number)))
     for i, f in enumerate(all_files):
         if os.path.splitext(f)[-1] != '.html':
             continue
-
+        logger.debug('Processing: {0}...'.format(f))
         html = open(os.path.join(docs_path, f)).read()
         soup = BeautifulSoup(html, 'html.parser')
         
@@ -70,7 +70,9 @@ def format_files(all_files, docs_path, output_path):
 
 def main(docs_sources, output_path, multi_thread=False, max_version='2017'):
     """
-    This is the main entry point of the program.
+    This is the main entry point of the program. It formats the HTML sources 
+    specified in ``docs_sources`` and writes them to the ``output_path`` directory 
+    specified.
 
     :param docs_sources: ``str`` path to the original documentation sources. This 
         should contain the ``cpp_ref`` folder, among other resources.
@@ -124,10 +126,10 @@ def main(docs_sources, output_path, multi_thread=False, max_version='2017'):
         if os.path.splitext(f)[-1] != '.html':
             # NOTE (sonictk): Just copy it over anyway, since those files are needed (CSS, scripts etc.)
             shutil.copy(os.path.join(docs_sources, f), output_path)
-    jobs = []
     if multi_thread:
-        for s in chunk(all_files, 500):
-            job = multiprocessing.Process(target=format_files, args=(s, docs_sources, output_path))
+        jobs = []
+        for idx, s in enumerate(chunk(all_files, 500)):
+            job = multiprocessing.Process(target=format_files, args=(s, docs_sources, output_path, idx))
             jobs.append(job)
         logger.debug('Num. of jobs scheduled: {0}'.format(len(jobs)))
         [j.start() for j in jobs]

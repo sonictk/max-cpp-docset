@@ -32,26 +32,37 @@ def clean_database(database_file_path):
 
 def write_entries(database_file_path,
                   filenames, 
-                  docs_root, 
+                  docs_sources, 
                   max_version='2017', 
-                  timeout=120.0):
+                  timeout=120.0,
+                  job_id=0):
     """This function writes search entries to the database."""
-    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger('write_entries_{0}'.format(job_id))
     conn = sqlite3.connect(database_file_path, timeout=timeout)
     cur = conn.cursor()
     for f in filenames:
         if os.path.splitext(f)[-1] == '.html':
             if '-members' in f:
                 continue
-
             if f.startswith('class_'):
-                class_name = ''.join([a[0].upper() + a[1:] for a in os.path.splitext(f)[0].split('class_')[-1].split('_')])
+                logger.debug('Processing: {0}...'.format(f))
+                class_name = ''
+                name_items = os.path.splitext(f)[0][6:].split('_')
+                for idx, section in enumerate(name_items):
+                    if section:
+                        class_name += section[0].upper() + section[1:]
+                    else:
+                        if not name_items[idx+1]:
+                            class_name += '_'
+                
+                logger.debug('Inserting class_name: {0}'.format(class_name))
                 cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path)'
                         ' VALUES (\'{name}\', \'Class\', \'{path}\')'.format(name=class_name, path=f))
 
                 # Now start finding items within the class pages to add
                 # additional entries for
-                html = open(os.path.join(docs_root, f)).read()
+                html = open(os.path.join(docs_sources, f)).read()
                 soup = BeautifulSoup(html, 'html.parser')
 
                 for h2 in soup.find_all('h2', {'class': 'groupheader'}):
@@ -156,6 +167,19 @@ def write_entries(database_file_path,
                 example_name = ''.join([a[0].upper() + a[1:] for a in os.path.splitext(f)[0].split('-example')[0].split('_') if a]) + 'Example'
                 cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path)'
                         ' VALUES (\'{name}\', \'Sample\', \'{path}\')'.format(name=example_name, path=f))
+            # NOTE (sonictk): Header file documentation
+            elif f.endswith('_8h.html'):
+                header_name = ''.join([a[0].upper() + a[1:] for a in f[0:-8].split('_') if a])
+                cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path)'
+                        ' VALUES (\'{name}\', \'File\', \'{path}\')'.format(name=header_name, path=f))
+            elif f.startswith('group___'):
+                module_name = ' '.join([a[0].upper() + a[1:] for a in f[8:-5].split('_') if a])
+                cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path)'
+                        ' VALUES (\'{name}\', \'Module\', \'{path}\')'.format(name=module_name, path=f))
+            elif f.startswith('union_'):
+                union_name = ''.join([a[0].upper() + a[1:] for a in f[6:-5].split('_') if a])
+                cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path)'
+                        ' VALUES (\'{name}\', \'Union\', \'{path}\')'.format(name=union_name, path=f))
 
     try: conn.commit()
     except sqlite3.OperationalError:
@@ -167,47 +191,76 @@ def write_entries(database_file_path,
         conn.close()
 
 
-def main(max_version='2016'):
-    """This is the main entry point of the program."""
+def main(docs_sources, output_path, max_version='2017', multi_thread=False):
+    """
+    This is the main entry point of the program.
+    
+    :param docs_sources: ``str`` path to the formatted documentation sources. This 
+        should be the root of the folder that contains the ``index.html`` formatted 
+        documentation.
+
+    :param output_path: ``str`` path to write the docset database to.
+
+    :param multi_thread: ``bool`` to indicate if multithreading support should be 
+        enabled.
+
+    :param max_version: ``str`` indicating what version of 3ds max the docset database
+        being generated for is.
+    """
     logger = logging.getLogger(__name__)
-    database_file_path = os.path.join(os.path.dirname(
-                            os.path.dirname(os.path.abspath(__file__))
-                        ),
+    database_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                       'max-{0}-cpp.docset'.format(max_version),
                                       'Contents',
                                       'Resources',
                                       'docSet.dsidx')
     if not os.path.isfile(database_file_path):
-        raise IOError('The database file: {0} does not exist!'
-                .format(database_file_path))
+        logger.debug('The database file: {0} does not exist, creating it...'.format(database_file_path))
+        open(database_file_path, 'w').close()
     # Clean the database of existing entries
     clean_database(database_file_path)
     # Write entries
-    docs_root = os.path.join(os.path.dirname(database_file_path), 'Documents')
+    if not docs_sources:
+        docs_sources = os.path.join(os.path.dirname(database_file_path), 'Documents')
 
-    if not os.path.isdir(docs_root):
-        raise IOError('The documentation directory: {0} does not exist!'.format(docs_root))
+    if not os.path.isdir(docs_sources):
+        raise IOError('The documentation directory: {0} does not exist!'.format(docs_sources))
 
     logger.debug('Inserting entries into database...')
-    all_files = os.listdir(docs_root)
+    all_files = os.listdir(docs_sources)
     logger.debug('Total number of files to process: {0}'.format(len(all_files)))
 
-    jobs = []
-    for s in chunk(all_files, 500):
-        job = multiprocessing.Process(target=write_entries,
-                args=(database_file_path, s, docs_root, max_version))
-        jobs.append(job)
+    if multi_thread:
+        jobs = []
+        for idx, s in enumerate(chunk(all_files, 500)):
+            job = multiprocessing.Process(target=write_entries,
+                    args=(database_file_path, s, docs_sources, max_version, idx))
+            jobs.append(job)
 
-    logger.debug('Num. of jobs scheduled: {0}'.format(len(jobs)))
-    [j.start() for j in jobs]
-    logger.info('Jobs submitted, please wait for them to complete!')
+        logger.debug('Num. of jobs scheduled: {0}'.format(len(jobs)))
+        [j.start() for j in jobs]
+        logger.info('Jobs submitted, please wait for them to complete!')
+    else:
+        write_entries(database_file_path, all_files, docs_sources, max_version)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(description='This program generates the database entries for the docset.program')
+    parser.add_argument('-s',
+                        '--sources',
+                        type=str,
+                        help='The directory on disk where the formatted documentation is located.')
+    parser.add_argument('-o',
+                        '--output',
+                        type=str,
+                        help='The full path to where the database should be written to.')
     parser.add_argument('-mv',
                         '--maxVersion',
                         default='2017',
                         help='The 3ds max version to generate the docset for.')
+    parser.add_argument('-mt',
+                        '--multiThread',
+                        default=False,
+                        type=bool,
+                        help='If set to True, will run jobs in parallel. Uses more system resources.')
     args = parser.parse_args()
-    main(args.maxVersion)
+    main(args.sources, args.output, args.maxVersion, args.multiThread)
