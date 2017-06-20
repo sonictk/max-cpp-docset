@@ -1,5 +1,5 @@
 # Ignore build files and backup files
 backup/
 resources/
-max-2017-cpp.docset/
+max-2017-cpp.docset/Contents/Resources/Documents
 *.pyc

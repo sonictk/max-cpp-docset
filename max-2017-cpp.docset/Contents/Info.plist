@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>max_2017_cpp_reference</string>
+	<key>CFBundleName</key>
+	<string>3ds max 2017 C++ SDK Reference</string>
+    <key>DashDocSetFamily</key>
+    <string>dashtoc</string>
+	<key>DocSetPlatformFamily</key>
+	<string>max17</string>
+	<key>isDashDocset</key>
+	<true/>
+	<key>isJavascriptEnabled</key>
+	<true/>
+</dict>
+</plist>
