@@ -24,7 +24,7 @@ def clean_database(database_file_path):
         logger.debug('Cleaning database...')
         cur.execute('DROP TABLE searchIndex;')
     except:
-        raise RuntimeError('Failed to clear out database! Aborting operation!')
+        logger.warning('Failed to clear out searchIndex! Is this the first time creating the database?')
     finally:
         cur.execute('CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);')
         cur.execute('CREATE UNIQUE INDEX anchor ON searchIndex (name, type, path);')
@@ -244,7 +244,7 @@ def main(docs_sources, output_path, max_version='2017', multi_thread=False):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    parser = argparse.ArgumentParser(description='This program generates the database entries for the docset.program')
+    parser = argparse.ArgumentParser(description='This program generates the database entries for the docset.')
     parser.add_argument('-s',
                         '--sources',
                         type=str,
