@@ -36,12 +36,11 @@ def format_files(all_files, docs_path, output_path, job_number=0):
             if src:
                 if 'www.microsofttranslator.com' in src:
                     script['src'] = ''
-
-                # NOTE (regionstormer): remove redirect - or we get plank pages/index page all the time
-                if '../scripts/utils/adsk.redirect.js' in src:
+                elif 'adsk.redirect.js' in src:
+                    # NOTE (regionstormer): remove redirect - or we get blank pages/index page all the time
                     script['src'] = ''
-
-                script['src'] = src.replace('../scripts', './scripts')
+                else:
+                    script['src'] = src.replace('../scripts', './scripts')
 
         links = soup.find_all('a') + soup.find_all('link')
 
