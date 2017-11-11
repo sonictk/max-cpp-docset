@@ -25,7 +25,7 @@ def format_files(all_files, docs_path, output_path, job_number=0):
         logger.debug('Processing: {0}...'.format(f))
         html = open(os.path.join(docs_path, f)).read()
         soup = BeautifulSoup(html, 'html.parser')
-        
+
         for img in soup.find_all('img'):
             src = img.get('src')
             if src:
@@ -36,13 +36,18 @@ def format_files(all_files, docs_path, output_path, job_number=0):
             if src:
                 if 'www.microsofttranslator.com' in src:
                     script['src'] = ''
+
+                # NOTE (regionstormer): remove redirect - or we get plank pages/index page all the time
+                if '../scripts/utils/adsk.redirect.js' in src:
+                    script['src'] = ''
+
                 script['src'] = src.replace('../scripts', './scripts')
-        
+
         links = soup.find_all('a') + soup.find_all('link')
 
         for link in links:
             href = link.get('href')
-            if href: 
+            if href:
                 link['href'] = href.replace('style/', './')\
                                    .replace('#!/url=./cpp_ref/', './')\
                                    .replace('cpp_ref/', './')
@@ -70,19 +75,19 @@ def format_files(all_files, docs_path, output_path, job_number=0):
 
 def main(docs_sources, output_path, multi_thread=False, max_version='2017'):
     """
-    This is the main entry point of the program. It formats the HTML sources 
-    specified in ``docs_sources`` and writes them to the ``output_path`` directory 
+    This is the main entry point of the program. It formats the HTML sources
+    specified in ``docs_sources`` and writes them to the ``output_path`` directory
     specified.
 
-    :param docs_sources: ``str`` path to the original documentation sources. This 
+    :param docs_sources: ``str`` path to the original documentation sources. This
         should contain the ``cpp_ref`` folder, among other resources.
-    
+
     :param output_path: ``str`` path to write the formatted HTML files to.
 
-    :param multi_thread: ``bool`` to indicate if multithreading support should be 
+    :param multi_thread: ``bool`` to indicate if multithreading support should be
         enabled.
 
-    :param max_version: ``str`` indicating what version of 3ds max the docset 
+    :param max_version: ``str`` indicating what version of 3ds max the docset
         being generated for is.
     """
     logger = logging.getLogger(__name__)
@@ -92,7 +97,7 @@ def main(docs_sources, output_path, multi_thread=False, max_version='2017'):
                                     max_version,
                                     'cpp_ref')
     if not output_path:
-        output_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+        output_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                 'max-{0}-cpp.docset'.format(max_version),
                                 'Contents',
                                 'Resources',
